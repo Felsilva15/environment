@@ -15,6 +15,7 @@ Bindings:
 | Capability | Native resource |
 | --- | --- |
 | no-ai-slop | ~/.agents/skills/no-ai-slop, backed by shared/skills/no-ai-slop |
+| build-felipe-apps | ~/.agents/skills/build-felipe-apps, backed by shared/skills/build-felipe-apps |
 | jev | jev-decisions@felipe-environment, rendered under .local/codex/marketplace |
 | google-drive | google-drive@openai-curated-remote |
 
@@ -26,8 +27,14 @@ The builder uses the official scaffold's marketplace shape. A content digest sup
 cachebuster because this reproducible sync workflow must produce the same version on every machine.
 The app installs a native cache copy; editing a cached copy is never the source of truth.
 
-The existing no-ai-slop is adopted without replacement if identical. Updates replace only the managed
-skill after checking its last receipt. Differing unmanaged copies require --adopt-existing and are
+Skills with kind `skill` and a source directory are installed when explicitly listed in this
+adapter's capabilities. Add each new skill to environment.json and adapter.json; no per-skill
+Python binding is needed. Each source must contain SKILL.md. Receipts track digests per skill
+and recognize the original single-skill receipt when upgrading.
+
+Existing skills are adopted without replacement if identical. Updates replace only the managed
+skill after checking its last receipt. All skill conflicts are checked before any installation.
+Differing unmanaged copies require --adopt-existing and are
 backed up under .local/codex/backups. The known legacy Jev registration requires the explicit
 --migrate-legacy-jev flag and is removed only after the new version is installed and verified.
 

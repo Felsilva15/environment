@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Felipe Apps"
+  short_description: "Felipe’s Electron and web app UI preferences"
+  default_prompt: "Use $build-felipe-apps to build this app with Felipe’s preferred layout and delivery workflow."

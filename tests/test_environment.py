@@ -63,6 +63,7 @@ class EnvironmentTests(unittest.TestCase):
         self.cli = FakeCLI(self.root)
         self.manifest = json.loads((self.root / "environment.json").read_text())
         self.adapter = codex.Adapter(self.root, self.manifest, self.home, self.cli, "fake-codex")
+        self.skill_source, self.skill_target = self.adapter.skills["no-ai-slop"]
         self.binaries = patch.object(codex.shutil, "which", side_effect=lambda x: "fake-" + x)
         self.binaries.start()
         self.addCleanup(self.binaries.stop)
@@ -87,7 +88,8 @@ class EnvironmentTests(unittest.TestCase):
     def test_fresh_apply_is_idempotent_and_keeps_unknown_plugins(self):
         self.cli.plugins["unrelated@other"] = {"pluginId": "unrelated@other", "enabled": True}
         self.assertTrue(self.adapter.apply()["converged"])
-        self.assertEqual(digest(self.adapter.skill_source), digest(self.adapter.skill_target))
+        for source, target in self.adapter.skills.values():
+            self.assertEqual(digest(source), digest(target))
         self.cli.calls.clear()
         self.assertTrue(self.adapter.apply()["converged"])
         self.assertTrue(all("list" in c for c in self.cli.calls))
@@ -95,8 +97,8 @@ class EnvironmentTests(unittest.TestCase):
 
     def test_repository_skill_update_is_backed_up(self):
         self.adapter.apply()
-        original = (self.adapter.skill_target / "SKILL.md").read_text()
-        with (self.adapter.skill_source / "SKILL.md").open("a") as f:
+        original = (self.skill_target / "SKILL.md").read_text()
+        with (self.skill_source / "SKILL.md").open("a") as f:
             f.write("\nNew source preference.\n")
         self.assertEqual(self.adapter.plan()["items"][0]["status"], "update")
         self.adapter.apply()
@@ -106,7 +108,7 @@ class EnvironmentTests(unittest.TestCase):
 
     def test_local_edit_blocks_all_mutations_until_explicit_adoption(self):
         self.adapter.apply()
-        local = self.adapter.skill_target / "SKILL.md"
+        local = self.skill_target / "SKILL.md"
         local.write_text("local edit")
         self.cli.calls.clear()
         with self.assertRaisesRegex(EnvironmentError, "Local no-ai-slop differs"):
@@ -128,6 +130,65 @@ class EnvironmentTests(unittest.TestCase):
         self.assertTrue(self.adapter.apply(migrate=True)["converged"])
         self.assertNotIn(codex.LEGACY_JEV, self.cli.plugins)
         self.assertIn(codex.JEV, self.cli.plugins)
+
+    def test_legacy_skill_receipt_allows_update_and_new_skill_install(self):
+        self.adapter.apply()
+        original_digest = digest(self.skill_target)
+        write_json(self.adapter.receipt_path, {"schema_version": 1, "skill_digest": original_digest})
+        second_source, second_target = self.adapter.skills["build-felipe-apps"]
+        shutil.rmtree(second_target)
+        with (self.skill_source / "SKILL.md").open("a") as stream:
+            stream.write("\nUpdated preference.\n")
+        statuses = {i["id"]: i["status"] for i in self.adapter.plan()["items"]}
+        self.assertEqual(statuses["no-ai-slop"], "update")
+        self.assertEqual(statuses["build-felipe-apps"], "install")
+        self.adapter.apply()
+        self.assertEqual(digest(second_source), digest(second_target))
+        self.assertEqual(set(self.adapter.receipt()["skill_digests"]), set(self.adapter.skills))
+
+    def test_second_skill_conflict_prevents_first_skill_update(self):
+        self.adapter.apply()
+        original = digest(self.skill_target)
+        with (self.skill_source / "SKILL.md").open("a") as stream:
+            stream.write("\nUpdated preference.\n")
+        _, second_target = self.adapter.skills["build-felipe-apps"]
+        (second_target / "SKILL.md").write_text("local preference")
+        self.cli.plugins[codex.DRIVE]["enabled"] = False
+        self.cli.calls.clear()
+        with self.assertRaisesRegex(EnvironmentError, "Local build-felipe-apps differs"):
+            self.adapter.apply()
+        self.assertEqual(digest(self.skill_target), original)
+        self.assertTrue(all("list" in c for c in self.cli.calls))
+        self.adapter.apply(adopt=True)
+        backups = list((self.adapter.local / "backups").glob("*/build-felipe-apps/SKILL.md"))
+        self.assertEqual([p.read_text() for p in backups], ["local preference"])
+
+    def test_new_skill_requires_registration_then_installs_without_code_binding(self):
+        cap = {"id": "another-skill", "kind": "skill", "source": "shared/skills/another-skill"}
+        source = self.root / cap["source"]
+        source.mkdir()
+        (source / "SKILL.md").write_text("---\nname: another-skill\ndescription: fixture\n---\n")
+        self.manifest["capabilities"].append(cap)
+        adapter = codex.Adapter(self.root, self.manifest, self.home, self.cli, "fake-codex")
+        with self.assertRaisesRegex(EnvironmentError, "Unsupported"):
+            adapter.apply()
+        registration_path = self.root / "harnesses/codex/adapter.json"
+        registration = json.loads(registration_path.read_text())
+        registration["capabilities"].append(cap["id"])
+        write_json(registration_path, registration)
+        adapter = codex.Adapter(self.root, self.manifest, self.home, self.cli, "fake-codex")
+        self.assertTrue(adapter.apply()["converged"])
+        self.assertEqual(digest(source), digest(self.home / ".agents/skills/another-skill"))
+
+    def test_skill_target_symlink_is_a_conflict(self):
+        external = self.base / "external"
+        copy_source(self.skill_source, external)
+        self.skill_target.parent.mkdir(parents=True)
+        self.skill_target.symlink_to(external, target_is_directory=True)
+        with self.assertRaisesRegex(EnvironmentError, "Local no-ai-slop differs"):
+            self.adapter.apply()
+        self.assertTrue(self.skill_target.is_symlink())
+        self.assertEqual(digest(external), digest(self.skill_source))
 
     def test_runtime_change_changes_plugin_cache_identity(self):
         before = self.adapter.desired_version()
@@ -154,13 +215,19 @@ class EnvironmentTests(unittest.TestCase):
         with self.assertRaisesRegex(EnvironmentError, "Duplicate"):
             env.validate(self.root)
 
+    def test_capability_id_cannot_escape_skill_destination(self):
+        self.manifest["capabilities"][0]["id"] = "../escape"
+        write_json(self.root / "environment.json", self.manifest)
+        with self.assertRaisesRegex(EnvironmentError, "Invalid capability ID"):
+            env.validate(self.root)
+
     def test_apply_lock_refuses_concurrent_mutation(self):
         with codex.exclusive_lock(self.adapter.local / "apply.lock"):
             with self.assertRaisesRegex(EnvironmentError, "Another apply"):
                 self.adapter.apply()
 
     def test_source_symlink_is_rejected(self):
-        source = self.adapter.skill_source / "escape"
+        source = self.skill_source / "escape"
         try:
             source.symlink_to(self.root / "environment.json")
         except OSError:

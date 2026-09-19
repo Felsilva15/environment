@@ -3,6 +3,7 @@
 | Item | Origin | Repository policy |
 | --- | --- | --- |
 | no-ai-slop | Felipe's existing authored/personal skill | Canonical source in shared/skills; initially imported unchanged |
+| build-felipe-apps | Authored with Codex from Felipe's Jev Mail instructions and corrections | Personal preferences, with sanitized evidence and desktop/web scope; not a third-party import |
 | Jev integration | Existing local plugin naming Felipe Silva as author | Shared runtime plus Codex-owned packaging; third-party notice preserved |
 | Google Drive | OpenAI curated integration, intentionally restored | Install by native plugin ID; authentication remains local |
 | Codex system/runtime/default skills | Vendor-managed | Do not vendor, delete, or synchronize their caches |

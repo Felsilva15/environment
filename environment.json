@@ -10,6 +10,13 @@
       "description": "Felipe's response style; preserve meaning in every harness."
     },
     {
+      "id": "build-felipe-apps",
+      "kind": "skill",
+      "provenance": "personal",
+      "source": "shared/skills/build-felipe-apps",
+      "description": "Felipe's Electron and operational web app preferences, distilled from the Jev Mail build."
+    },
+    {
       "id": "jev",
       "kind": "tool",
       "provenance": "personal",

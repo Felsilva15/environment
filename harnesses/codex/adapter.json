@@ -4,7 +4,7 @@
   "owner": "Codex",
   "status": "implemented",
   "entrypoint": "adapter.py",
-  "capabilities": ["no-ai-slop", "jev", "google-drive"],
+  "capabilities": ["no-ai-slop", "build-felipe-apps", "jev", "google-drive"],
   "platforms": ["darwin"],
   "validation": "python3 -m unittest discover -s tests -v",
   "verified_on": ["macOS; Python 3.14; Codex CLI plugin commands"]

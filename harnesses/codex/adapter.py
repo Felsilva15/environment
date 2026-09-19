@@ -4,13 +4,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import time
 from contextlib import contextmanager
 from pathlib import Path
 
 from scripts.common import (
-    EnvironmentError, copy_source, digest, install_tree, managed_status,
+    EnvironmentError, copy_source, digest, inside, install_tree, managed_status,
     read_json, run, write_json,
 )
 
@@ -18,7 +19,7 @@ MARKETPLACE = "felipe-environment"
 JEV = "jev-decisions@" + MARKETPLACE
 LEGACY_JEV = "jev-decisions@personal"
 DRIVE = "google-drive@openai-curated-remote"
-SUPPORTED = {"no-ai-slop", "jev", "google-drive"}
+NATIVE_BINDINGS = {"jev", "google-drive"}
 
 
 @contextmanager
@@ -46,8 +47,19 @@ class Adapter:
         self.receipt_path = self.local / "receipt.json"
         self.template = self.root / "harnesses/codex/marketplace"
         self.runtime = self.root / self.capabilities["jev"]["source"]
-        self.skill_source = self.root / self.capabilities["no-ai-slop"]["source"]
-        self.skill_target = self.home / ".agents/skills/no-ai-slop"
+        registered = read_json(self.root / "harnesses/codex/adapter.json")["capabilities"]
+        self.skills = {
+            cap_id: (
+                self.root / cap["source"],
+                self.home / ".agents/skills" / cap_id,
+            )
+            for cap_id, cap in self.capabilities.items()
+            if cap_id in registered and cap.get("kind") == "skill"
+        }
+        for cap_id, (source, _) in self.skills.items():
+            if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", cap_id):
+                raise EnvironmentError(f"Invalid skill ID: {cap_id}")
+            inside(self.root, source)
         bundled = self.home / ".codex/plugins/.plugin-appserver/codex"
         self.codex = codex or os.environ.get("ENVIRONMENT_CODEX_BIN")
         if not self.codex:
@@ -71,8 +83,16 @@ class Adapter:
 
     def plan(self):
         state = self.receipt()
-        status, desired = managed_status(self.skill_source, self.skill_target, state.get("skill_digest"))
-        items = [{"id": "no-ai-slop", "status": status, "detail": str(self.skill_target)}]
+        previous = state.get("skill_digests", {})
+        # Preserve receipts written before the adapter supported multiple skills.
+        if "no-ai-slop" not in previous and state.get("skill_digest"):
+            previous = {**previous, "no-ai-slop": state["skill_digest"]}
+        items = []
+        for cap_id, (source, target) in self.skills.items():
+            if not (source / "SKILL.md").is_file():
+                raise EnvironmentError(f"Missing SKILL.md for {cap_id}")
+            status, _ = managed_status(source, target, previous.get(cap_id))
+            items.append({"id": cap_id, "status": status, "detail": str(target)})
         installed = self.installed()
         desired_version = self.desired_version()
         jev = installed.get(JEV)
@@ -82,7 +102,7 @@ class Adapter:
         items.append({"id": "google-drive", "status": "ok" if drive and drive.get("enabled") else "install", "detail": "Native plugin; OAuth authorization must be completed on each computer."})
         if LEGACY_JEV in installed:
             items.append({"id": "legacy-jev", "status": "migration", "detail": "Use --migrate-legacy-jev to replace jev-decisions@personal after the repository plugin is installed."})
-        for cap in sorted(set(self.capabilities) - SUPPORTED):
+        for cap in sorted(set(self.capabilities) - NATIVE_BINDINGS - set(self.skills)):
             items.append({"id": cap, "status": "unsupported", "detail": "Codex adapter has no binding; implement it explicitly."})
         # Discovery is read-only. Vendor defaults and integrations are never removal targets.
         unmanaged = sorted(
@@ -126,8 +146,9 @@ class Adapter:
             statuses = {i["id"]: i["status"] for i in plan["items"]}
             if "unsupported" in statuses.values():
                 raise EnvironmentError("Unsupported capabilities in manifest; no changes applied.")
-            if statuses["no-ai-slop"] == "conflict" and not adopt:
-                raise EnvironmentError("Local no-ai-slop differs. Review it, then use --adopt-existing to back it up and adopt the repository copy.")
+            for cap_id in self.skills:
+                if statuses[cap_id] == "conflict" and not adopt:
+                    raise EnvironmentError(f"Local {cap_id} differs. Review it, then use --adopt-existing to back it up and adopt the repository copy.")
             if "legacy-jev" in statuses and not migrate:
                 raise EnvironmentError("Legacy Jev is installed. Use --migrate-legacy-jev for the one-time migration; no changes applied.")
             if statuses["jev"] != "ok":
@@ -141,16 +162,17 @@ class Adapter:
                 self.runner([self.codex, "plugin", "remove", LEGACY_JEV, "--json"])
             if statuses["google-drive"] != "ok":
                 self.runner([self.codex, "plugin", "add", DRIVE, "--json"])
-            if statuses["no-ai-slop"] != "ok":
-                backup = self.local / "backups" / str(time.time_ns())
-                install_tree(self.skill_source, self.skill_target, backup)
+            for cap_id, (source, target) in self.skills.items():
+                if statuses[cap_id] != "ok":
+                    backup = self.local / "backups" / str(time.time_ns())
+                    install_tree(source, target, backup)
             # Receipt is written only after verifying resources; it contains no credentials.
             after = self.plan()
             if not after["converged"]:
                 raise EnvironmentError("Apply is incomplete. Run plan to inspect remaining drift; retry is safe.")
             write_json(self.receipt_path, {
                 "schema_version": 1,
-                "skill_digest": digest(self.skill_source),
+                "skill_digests": {cap_id: digest(source) for cap_id, (source, _) in self.skills.items()},
                 "jev_version": self.desired_version(),
                 "auth_verification": "Installation checked; OAuth/API authorization is not asserted.",
             })

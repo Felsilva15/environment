@@ -17,6 +17,7 @@ configuration by changing product names.
 Desired capabilities:
 
 - `no-ai-slop`: Felipe's canonical response-style skill.
+- `build-felipe-apps`: Electron and web app UI preferences learned from the Jev Mail build.
 - `jev`: Felipe's Jev integration, with a shared MCP runtime and native harness packaging.
 - `google-drive`: intentionally retained third-party integration, not a custom skill.
 
@@ -46,7 +47,7 @@ python3 env.py apply codex --migrate-legacy-jev
 
 This installs and verifies the repository plugin before removing only the known old Jev
 registration. It does not delete the old source folder or its Keychain credential. Differing
-local copies of `no-ai-slop` require `--adopt-existing`; they are backed up first.
+local copies of managed skills require `--adopt-existing`; they are backed up first.
 
 Authentication is local. Connect Google Drive when prompted. For Jev, set `TYPESAFE_API_KEY`
 in the harness environment, or on macOS run:

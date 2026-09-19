@@ -6,6 +6,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +22,8 @@ def validate(root=ROOT):
         raise EnvironmentError("Unsupported environment manifest version")
     ids = []
     for cap in manifest["capabilities"]:
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", cap["id"]):
+            raise EnvironmentError(f"Invalid capability ID: {cap['id']}")
         ids.append(cap["id"])
         if cap.get("source") and not inside(root, cap["source"]).is_dir():
             raise EnvironmentError(f"Missing source for {cap['id']}")
