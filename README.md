@@ -20,6 +20,7 @@ Desired capabilities:
 - `software-design`: simple neutral UI, layout, visual hierarchy, and interaction preferences.
 - `software-frontend`: components, UI state, web/Electron boundaries, and runtime verification.
 - `software-backend`: contracts, persistence, integrations, and reliable background work.
+- `typesafe-ai`: third-party integration skill for building with TypeSafe/Jev, pinned to a reviewed upstream revision.
 - `jev`: Felipe's Jev integration, with a shared MCP runtime and native harness packaging.
 - `google-drive`: intentionally retained third-party integration, not a custom skill.
 
@@ -85,7 +86,8 @@ each machine only after that machine's adapter and authentication have been veri
 
 ```text
 environment.json          desired capabilities and provenance
-shared/skills/            canonical portable skills
+shared/skills/            personal portable skills
+shared/integrations/      scoped vendor integration skills, pinned source, and licenses
 shared/tools/             reusable tool implementations, not credentials
 harnesses/<id>/           native adapter, packaging, status, and documentation
 docs/adapter-contract.md  contract for new harnesses
@@ -118,3 +120,6 @@ npm test
 See [architecture](docs/architecture.md), [provenance](docs/provenance.md), and
 [Codex adapter details](harnesses/codex/README.md). Shared intent is deliberate; local discoveries
 must not silently expand the desired manifest.
+
+For vendor skill maintenance, see [integration skills](docs/integration-skills.md). Sync uses
+the reviewed copy committed here; it never silently replaces it with upstream main.

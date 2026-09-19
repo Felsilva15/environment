@@ -5,6 +5,7 @@
 | no-ai-slop | Felipe's existing authored/personal skill | Canonical source in shared/skills; initially imported unchanged |
 | software-design, software-frontend, software-backend | Personal preferences authored with Codex and refined by Felipe | Neutral role-based guidance; project-specific examples removed; public design references identified separately |
 | Jev integration | Existing local plugin naming Felipe Silva as author | Shared runtime plus Codex-owned packaging; third-party notice preserved |
+| typesafe-ai | TypeSafe AI's MIT-licensed skill from typesafe-ai/skills | Third-party integration; unchanged upstream reference and license pinned by commit/hash; local entrypoint narrows activation |
 | Google Drive | OpenAI curated integration, intentionally restored | Install by native plugin ID; authentication remains local |
 | Codex system/runtime/default skills | Vendor-managed | Do not vendor, delete, or synchronize their caches |
 | Former Cursor-derived skills and Claude Cowork imports | Previous cleanup | Not part of desired state; no automatic removal on other computers |

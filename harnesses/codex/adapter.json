@@ -4,7 +4,7 @@
   "owner": "Codex",
   "status": "implemented",
   "entrypoint": "adapter.py",
-  "capabilities": ["no-ai-slop", "software-design", "software-frontend", "software-backend", "jev", "google-drive"],
+  "capabilities": ["no-ai-slop", "software-design", "software-frontend", "software-backend", "typesafe-ai", "jev", "google-drive"],
   "retired_skills": [
     {
       "id": "build-felipe-apps",

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TypeSafe Integration"
+  short_description: "Build and evaluate TypeSafe and Jev integrations"
+  default_prompt: "Use $typesafe-ai to design and implement this TypeSafe integration using current vendor documentation."

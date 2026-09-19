@@ -18,6 +18,7 @@ Bindings:
 | software-design | ~/.agents/skills/software-design, backed by shared/skills/software-design |
 | software-frontend | ~/.agents/skills/software-frontend, backed by shared/skills/software-frontend |
 | software-backend | ~/.agents/skills/software-backend, backed by shared/skills/software-backend |
+| typesafe-ai | ~/.agents/skills/typesafe-ai, backed by shared/integrations/typesafe-ai; pinned vendor reference and scoped entrypoint |
 | jev | jev-decisions@felipe-environment, rendered under .local/codex/marketplace |
 | google-drive | google-drive@openai-curated-remote |
 

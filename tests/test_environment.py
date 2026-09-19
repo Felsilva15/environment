@@ -261,6 +261,30 @@ class EnvironmentTests(unittest.TestCase):
         with self.assertRaisesRegex(EnvironmentError, "Invalid capability ID"):
             env.validate(self.root)
 
+    def test_vendor_content_and_license_must_match_the_pin(self):
+        env.validate(self.root)
+        cap = next(c for c in self.manifest["capabilities"] if c["id"] == "typesafe-ai")
+        for item in cap["upstream"]["files"]:
+            path = self.root / cap["source"] / item["vendored_path"]
+            original = path.read_bytes()
+            path.write_bytes(original + b"\nchanged upstream content\n")
+            with self.assertRaisesRegex(EnvironmentError, "Upstream file hash mismatch"):
+                env.validate(self.root)
+            path.write_bytes(original)
+
+    def test_vendor_pin_requires_commit_and_contained_files(self):
+        cap = next(c for c in self.manifest["capabilities"] if c["id"] == "typesafe-ai")
+        revision = cap["upstream"]["revision"]
+        cap["upstream"]["revision"] = "main"
+        write_json(self.root / "environment.json", self.manifest)
+        with self.assertRaisesRegex(EnvironmentError, "Invalid upstream pin"):
+            env.validate(self.root)
+        cap["upstream"]["revision"] = revision
+        cap["upstream"]["files"][0]["vendored_path"] = "../../outside.md"
+        write_json(self.root / "environment.json", self.manifest)
+        with self.assertRaisesRegex(EnvironmentError, "Path escapes"):
+            env.validate(self.root)
+
     def test_apply_lock_refuses_concurrent_mutation(self):
         with codex.exclusive_lock(self.adapter.local / "apply.lock"):
             with self.assertRaisesRegex(EnvironmentError, "Another apply"):

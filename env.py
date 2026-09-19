@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -27,6 +28,17 @@ def validate(root=ROOT):
         ids.append(cap["id"])
         if cap.get("source") and not inside(root, cap["source"]).is_dir():
             raise EnvironmentError(f"Missing source for {cap['id']}")
+        upstream = cap.get("upstream")
+        if upstream:
+            if (not re.fullmatch(r"[a-f0-9]{40}", upstream["revision"])
+                    or not upstream.get("files")):
+                raise EnvironmentError(f"Invalid upstream pin for {cap['id']}")
+            source = inside(root, cap["source"])
+            for item in upstream["files"]:
+                path = inside(source, item["vendored_path"])
+                if (not path.is_file()
+                        or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]):
+                    raise EnvironmentError(f"Upstream file hash mismatch for {cap['id']}: {item['vendored_path']}")
     if len(ids) != len(set(ids)):
         raise EnvironmentError("Duplicate capability IDs")
     for path in sorted((root / "harnesses").glob("*/adapter.json")):
