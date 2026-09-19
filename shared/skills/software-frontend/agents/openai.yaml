@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend"
+  short_description: "Reusable components and dependable web and desktop UI"
+  default_prompt: "Use $software-frontend to implement and verify this interface using the existing project conventions."

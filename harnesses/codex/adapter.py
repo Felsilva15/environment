@@ -47,7 +47,8 @@ class Adapter:
         self.receipt_path = self.local / "receipt.json"
         self.template = self.root / "harnesses/codex/marketplace"
         self.runtime = self.root / self.capabilities["jev"]["source"]
-        registered = read_json(self.root / "harnesses/codex/adapter.json")["capabilities"]
+        registration = read_json(self.root / "harnesses/codex/adapter.json")
+        registered = registration["capabilities"]
         self.skills = {
             cap_id: (
                 self.root / cap["source"],
@@ -60,6 +61,14 @@ class Adapter:
             if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", cap_id):
                 raise EnvironmentError(f"Invalid skill ID: {cap_id}")
             inside(self.root, source)
+        self.retired_skills = registration.get("retired_skills", [])
+        for retired in self.retired_skills:
+            if (not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", retired["id"])
+                    or retired["id"] in self.skills
+                    or not re.fullmatch(r"[a-f0-9]{64}", retired["sha256"])
+                    or not retired.get("replacements")
+                    or not set(retired["replacements"]).issubset(self.skills)):
+                raise EnvironmentError("Invalid explicit skill retirement")
         bundled = self.home / ".codex/plugins/.plugin-appserver/codex"
         self.codex = codex or os.environ.get("ENVIRONMENT_CODEX_BIN")
         if not self.codex:
@@ -93,6 +102,14 @@ class Adapter:
                 raise EnvironmentError(f"Missing SKILL.md for {cap_id}")
             status, _ = managed_status(source, target, previous.get(cap_id))
             items.append({"id": cap_id, "status": status, "detail": str(target)})
+        for retired in self.retired_skills:
+            target = self.home / ".agents/skills" / retired["id"]
+            if target.exists() or target.is_symlink():
+                unchanged = (not target.is_symlink() and target.is_dir()
+                             and digest(target) == retired["sha256"])
+                items.append({"id": "retired-skill:" + retired["id"],
+                              "status": "retire" if unchanged else "conflict",
+                              "detail": "Back up the explicitly replaced skill after verifying its replacements."})
         installed = self.installed()
         desired_version = self.desired_version()
         jev = installed.get(JEV)
@@ -146,6 +163,9 @@ class Adapter:
             statuses = {i["id"]: i["status"] for i in plan["items"]}
             if "unsupported" in statuses.values():
                 raise EnvironmentError("Unsupported capabilities in manifest; no changes applied.")
+            for retired in self.retired_skills:
+                if statuses.get("retired-skill:" + retired["id"]) == "conflict":
+                    raise EnvironmentError(f"Retired skill {retired['id']} has local changes; reconcile it before migration. No changes applied.")
             for cap_id in self.skills:
                 if statuses[cap_id] == "conflict" and not adopt:
                     raise EnvironmentError(f"Local {cap_id} differs. Review it, then use --adopt-existing to back it up and adopt the repository copy.")
@@ -167,6 +187,17 @@ class Adapter:
                     backup = self.local / "backups" / str(time.time_ns())
                     install_tree(source, target, backup)
             # Receipt is written only after verifying resources; it contains no credentials.
+            after = self.plan()
+            if any(i["status"] not in {"ok", "retire"} for i in after["items"]):
+                raise EnvironmentError("Apply is incomplete. Replacements were not verified; retired skills preserved.")
+            for retired in self.retired_skills:
+                target = self.home / ".agents/skills" / retired["id"]
+                if target.exists():
+                    if target.is_symlink() or digest(target) != retired["sha256"]:
+                        raise EnvironmentError("Retired skill changed during apply; preserved for review.")
+                    backup = self.local / "backups" / str(time.time_ns())
+                    backup.mkdir(parents=True)
+                    shutil.move(str(target), str(backup / retired["id"]))
             after = self.plan()
             if not after["converged"]:
                 raise EnvironmentError("Apply is incomplete. Run plan to inspect remaining drift; retry is safe.")

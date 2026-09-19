@@ -17,11 +17,19 @@ configuration by changing product names.
 Desired capabilities:
 
 - `no-ai-slop`: Felipe's canonical response-style skill.
-- `build-felipe-apps`: Electron and web app UI preferences learned from the Jev Mail build.
+- `software-design`: simple neutral UI, layout, visual hierarchy, and interaction preferences.
+- `software-frontend`: components, UI state, web/Electron boundaries, and runtime verification.
+- `software-backend`: contracts, persistence, integrations, and reliable background work.
 - `jev`: Felipe's Jev integration, with a shared MCP runtime and native harness packaging.
 - `google-drive`: intentionally retained third-party integration, not a custom skill.
 
 Vendor defaults remain vendor-managed. Unlisted integrations are reported, never deleted.
+
+The three software skills use neutral names and reusable guidance without prior-project
+examples. Load only the roles relevant to the task; a full-stack feature can use all three.
+Codex replaces the earlier combined skill through an explicit migration: install its replacements,
+verify them, and back up the known unchanged old skill outside discovery. Local edits block
+that migration. Other harnesses own their corresponding migration if they installed the old skill.
 
 ## Another computer
 

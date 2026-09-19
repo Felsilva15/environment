@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backend"
+  short_description: "Clear contracts, persistent data, and reliable jobs"
+  default_prompt: "Use $software-backend to implement this backend with clear boundaries and dependable execution."

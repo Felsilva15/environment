@@ -4,7 +4,14 @@
   "owner": "Codex",
   "status": "implemented",
   "entrypoint": "adapter.py",
-  "capabilities": ["no-ai-slop", "build-felipe-apps", "jev", "google-drive"],
+  "capabilities": ["no-ai-slop", "software-design", "software-frontend", "software-backend", "jev", "google-drive"],
+  "retired_skills": [
+    {
+      "id": "build-felipe-apps",
+      "sha256": "5ce257051ed01adf0eb6c2b5678ff170dff4a0890af9bf07d47366f410a12c4c",
+      "replacements": ["software-design", "software-frontend", "software-backend"]
+    }
+  ],
   "platforms": ["darwin"],
   "validation": "python3 -m unittest discover -s tests -v",
   "verified_on": ["macOS; Python 3.14; Codex CLI plugin commands"]

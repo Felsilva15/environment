@@ -135,13 +135,13 @@ class EnvironmentTests(unittest.TestCase):
         self.adapter.apply()
         original_digest = digest(self.skill_target)
         write_json(self.adapter.receipt_path, {"schema_version": 1, "skill_digest": original_digest})
-        second_source, second_target = self.adapter.skills["build-felipe-apps"]
+        second_source, second_target = self.adapter.skills["software-design"]
         shutil.rmtree(second_target)
         with (self.skill_source / "SKILL.md").open("a") as stream:
             stream.write("\nUpdated preference.\n")
         statuses = {i["id"]: i["status"] for i in self.adapter.plan()["items"]}
         self.assertEqual(statuses["no-ai-slop"], "update")
-        self.assertEqual(statuses["build-felipe-apps"], "install")
+        self.assertEqual(statuses["software-design"], "install")
         self.adapter.apply()
         self.assertEqual(digest(second_source), digest(second_target))
         self.assertEqual(set(self.adapter.receipt()["skill_digests"]), set(self.adapter.skills))
@@ -151,16 +151,16 @@ class EnvironmentTests(unittest.TestCase):
         original = digest(self.skill_target)
         with (self.skill_source / "SKILL.md").open("a") as stream:
             stream.write("\nUpdated preference.\n")
-        _, second_target = self.adapter.skills["build-felipe-apps"]
+        _, second_target = self.adapter.skills["software-design"]
         (second_target / "SKILL.md").write_text("local preference")
         self.cli.plugins[codex.DRIVE]["enabled"] = False
         self.cli.calls.clear()
-        with self.assertRaisesRegex(EnvironmentError, "Local build-felipe-apps differs"):
+        with self.assertRaisesRegex(EnvironmentError, "Local software-design differs"):
             self.adapter.apply()
         self.assertEqual(digest(self.skill_target), original)
         self.assertTrue(all("list" in c for c in self.cli.calls))
         self.adapter.apply(adopt=True)
-        backups = list((self.adapter.local / "backups").glob("*/build-felipe-apps/SKILL.md"))
+        backups = list((self.adapter.local / "backups").glob("*/software-design/SKILL.md"))
         self.assertEqual([p.read_text() for p in backups], ["local preference"])
 
     def test_new_skill_requires_registration_then_installs_without_code_binding(self):
@@ -179,6 +179,46 @@ class EnvironmentTests(unittest.TestCase):
         adapter = codex.Adapter(self.root, self.manifest, self.home, self.cli, "fake-codex")
         self.assertTrue(adapter.apply()["converged"])
         self.assertEqual(digest(source), digest(self.home / ".agents/skills/another-skill"))
+
+    def install_retired_fixture(self):
+        retired = self.adapter.retired_skills[0]
+        target = self.home / ".agents/skills" / retired["id"]
+        target.mkdir(parents=True)
+        (target / "SKILL.md").write_text("previous combined instructions")
+        retired["sha256"] = digest(target)
+        return target
+
+    def test_explicit_retirement_backs_up_only_after_replacements_install(self):
+        old = self.install_retired_fixture()
+        original = digest(old)
+        self.assertIn("retire", [i["status"] for i in self.adapter.plan()["items"]])
+        self.assertTrue(self.adapter.apply()["converged"])
+        self.assertFalse(old.exists())
+        backups = list((self.adapter.local / "backups").glob("*/" + old.name))
+        self.assertEqual([digest(p) for p in backups], [original])
+        for source, target in self.adapter.skills.values():
+            self.assertEqual(digest(source), digest(target))
+        self.cli.calls.clear()
+        self.adapter.apply()
+        self.assertEqual(len(list((self.adapter.local / "backups").glob("*/" + old.name))), 1)
+        self.assertTrue(all("list" in c for c in self.cli.calls))
+
+    def test_retired_local_edit_blocks_all_mutation_even_with_adopt(self):
+        old = self.install_retired_fixture()
+        (old / "SKILL.md").write_text("unsynced change")
+        with self.assertRaisesRegex(EnvironmentError, "has local changes"):
+            self.adapter.apply(adopt=True)
+        self.assertEqual((old / "SKILL.md").read_text(), "unsynced change")
+        self.assertFalse(self.skill_target.exists())
+        self.assertTrue(all("list" in c for c in self.cli.calls))
+
+    def test_failed_replacement_preserves_retired_skill(self):
+        old = self.install_retired_fixture()
+        self.cli.fail_install = True
+        with self.assertRaisesRegex(EnvironmentError, "simulated"):
+            self.adapter.apply()
+        self.assertTrue(old.is_dir())
+        self.assertFalse((self.adapter.local / "backups").exists())
 
     def test_skill_target_symlink_is_a_conflict(self):
         external = self.base / "external"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design"
+  short_description: "Simple neutral interfaces and clear interaction design"
+  default_prompt: "Use $software-design to design this interface with simple neutral styling and a clear layout."

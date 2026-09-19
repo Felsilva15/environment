@@ -10,11 +10,25 @@
       "description": "Felipe's response style; preserve meaning in every harness."
     },
     {
-      "id": "build-felipe-apps",
+      "id": "software-design",
       "kind": "skill",
       "provenance": "personal",
-      "source": "shared/skills/build-felipe-apps",
-      "description": "Felipe's Electron and operational web app preferences, distilled from the Jev Mail build."
+      "source": "shared/skills/software-design",
+      "description": "Simple neutral interfaces, layout, hierarchy, themes, and interaction design."
+    },
+    {
+      "id": "software-frontend",
+      "kind": "skill",
+      "provenance": "personal",
+      "source": "shared/skills/software-frontend",
+      "description": "Frontend structure, components, state, web and Electron boundaries, and runtime verification."
+    },
+    {
+      "id": "software-backend",
+      "kind": "skill",
+      "provenance": "personal",
+      "source": "shared/skills/software-backend",
+      "description": "Backend contracts, persistence, integrations, reliable jobs, and controlled side effects."
     },
     {
       "id": "jev",

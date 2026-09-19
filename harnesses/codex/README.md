@@ -15,7 +15,9 @@ Bindings:
 | Capability | Native resource |
 | --- | --- |
 | no-ai-slop | ~/.agents/skills/no-ai-slop, backed by shared/skills/no-ai-slop |
-| build-felipe-apps | ~/.agents/skills/build-felipe-apps, backed by shared/skills/build-felipe-apps |
+| software-design | ~/.agents/skills/software-design, backed by shared/skills/software-design |
+| software-frontend | ~/.agents/skills/software-frontend, backed by shared/skills/software-frontend |
+| software-backend | ~/.agents/skills/software-backend, backed by shared/skills/software-backend |
 | jev | jev-decisions@felipe-environment, rendered under .local/codex/marketplace |
 | google-drive | google-drive@openai-curated-remote |
 
@@ -31,6 +33,12 @@ Skills with kind `skill` and a source directory are installed when explicitly li
 adapter's capabilities. Add each new skill to environment.json and adapter.json; no per-skill
 Python binding is needed. Each source must contain SKILL.md. Receipts track digests per skill
 and recognize the original single-skill receipt when upgrading.
+
+`retired_skills` declares specific authorized replacements, not a general prune policy.
+The original combined skill is backed up outside discovery only when its content matches
+the recorded digest and all replacements have been verified. A differing local copy blocks
+apply before mutations, even with --adopt-existing; reconcile it explicitly first. Unknown
+skills and plugins remain untouched. The migration is safe on machines that never had it.
 
 Existing skills are adopted without replacement if identical. Updates replace only the managed
 skill after checking its last receipt. All skill conflicts are checked before any installation.
