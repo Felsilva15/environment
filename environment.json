@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "owner": "Felipe Silva",
+  "capabilities": [
+    {
+      "id": "no-ai-slop",
+      "kind": "skill",
+      "provenance": "personal",
+      "source": "shared/skills/no-ai-slop",
+      "description": "Felipe's response style; preserve meaning in every harness."
+    },
+    {
+      "id": "jev",
+      "kind": "tool",
+      "provenance": "personal",
+      "source": "shared/tools/jev",
+      "description": "Shared Jev MCP runtime; native packaging belongs to each harness."
+    },
+    {
+      "id": "google-drive",
+      "kind": "integration",
+      "provenance": "third-party",
+      "description": "Intentionally retained connection. Installation and authentication are separate."
+    }
+  ],
+  "policies": {
+    "unlisted_items": "report-only",
+    "vendor_defaults": "vendor-managed",
+    "secrets": "machine-local",
+    "harness_adapters": "implemented-by-the-owning-harness"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "felipe-environment",
+  "interface": {
+    "displayName": "Felipe Environment"
+  },
+  "plugins": [
+    {
+      "name": "jev-decisions",
+      "source": {
+        "source": "local",
+        "path": "./plugins/jev-decisions"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

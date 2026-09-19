@@ -1,0 +1,36 @@
+{
+  "name": "jev-decisions",
+  "version": "0.1.0",
+  "description": "Ask TypeSafe Jev for fast probabilistic decisions from local Codex and ChatGPT tasks.",
+  "author": {
+    "name": "Felipe Silva"
+  },
+  "homepage": "https://github.com/tamaratran/fast-jev-compaction",
+  "keywords": [
+    "jev",
+    "typesafe",
+    "decisions",
+    "classification",
+    "scoring"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Jev Decisions",
+    "shortDescription": "Fast probabilistic decisions with TypeSafe Jev.",
+    "longDescription": "Adds local Jev tools for binary probabilities, categorical choices, rubric scores, and batched mixed decisions. Selected context is sent to TypeSafe's API.",
+    "developerName": "Felipe Silva",
+    "category": "Productivity",
+    "capabilities": [
+      "Analyze",
+      "Classify",
+      "Score"
+    ],
+    "websiteURL": "https://typesafe.ai/",
+    "defaultPrompt": [
+      "Use Jev to decide whether this evidence supports the claim.",
+      "Ask Jev to classify these items into my categories.",
+      "Use Jev to score these options against my rubric."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
